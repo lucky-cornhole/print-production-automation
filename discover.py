@@ -41,17 +41,27 @@ def flatten(oset):
    out.append({"order":o["name"],"created_at":o["createdAt"],"line_item_id":li["id"],"product":(li.get("product") or {}).get("title"),"product_type":(li.get("product") or {}).get("productType"),"variant":li.get("variantTitle"),"sku":sku,"quantity":li["quantity"],"options":{x["name"]:x["value"] for x in ((li.get("variant") or {}).get("selectedOptions") or [])},"variant_image":((li.get("variant") or {}).get("image") or {}).get("url"),"properties":a,"fpd":{k:v for k,v in a.items() if k.startswith("_fpd")},"is_custom":any(k.startswith("_fpd") for k in a),"series_code":c,"series_rule":SERIES.get(c),"production_candidate":bool(c)})
  return out
 def drive_service():
+ from googleapiclient.discovery import build
+ scopes=["https://www.googleapis.com/auth/drive.readonly"]
+ service_json=os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON","").strip()
+ if service_json:
+  from google.oauth2 import service_account
+  try: info=json.loads(service_json)
+  except json.JSONDecodeError as e: raise RuntimeError(f"GOOGLE_SERVICE_ACCOUNT_JSON is invalid JSON: {e}")
+  creds=service_account.Credentials.from_service_account_info(info,scopes=scopes)
+  return build("drive","v3",credentials=creds,cache_discovery=False)
  from google.oauth2.credentials import Credentials
  from google_auth_oauthlib.flow import InstalledAppFlow
  from google.auth.transport.requests import Request
- from googleapiclient.discovery import build
- scopes=["https://www.googleapis.com/auth/drive.readonly"]; tp=ROOT/"token.json"; creds=None
+ tp=ROOT/"token.json"; creds=None
  if tp.exists(): creds=Credentials.from_authorized_user_file(str(tp),scopes)
- if creds and creds.expired and creds.refresh_token: creds.refresh(Request())
+ if creds and creds.expired and creds.refresh_token:
+  creds.refresh(Request()); tp.write_text(creds.to_json(),encoding="utf-8")
  if not creds or not creds.valid:
   cp=ROOT/"credentials.json"
-  if not cp.exists(): raise RuntimeError("Missing credentials.json for Google Drive OAuth. See README.")
-  creds=InstalledAppFlow.from_client_secrets_file(str(cp),scopes).run_local_server(port=0); tp.write_text(creds.to_json())
+  if not cp.exists(): raise RuntimeError("Missing credentials.json for local Google Drive OAuth.")
+  creds=InstalledAppFlow.from_client_secrets_file(str(cp),scopes).run_local_server(port=0)
+  tp.write_text(creds.to_json(),encoding="utf-8")
  return build("drive","v3",credentials=creds,cache_discovery=False)
 def children(s,fid):
  out=[]; pt=None

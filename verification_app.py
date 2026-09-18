@@ -9,7 +9,12 @@ ROOT = Path(__file__).resolve().parent
 OUTPUT = ROOT / "output"
 
 MATCHES_FILE = OUTPUT / "artwork_matches.json"
-DECISIONS_FILE = OUTPUT / "verification_decisions.json"
+
+STATE = ROOT / "state"
+STATE.mkdir(parents=True, exist_ok=True)
+
+DECISIONS_FILE = STATE / "verification_decisions.json"
+
 PRINT_BATCHES_DIR = OUTPUT / "print_batches"
 PRINT_BATCHES_DIR.mkdir(parents=True, exist_ok=True)
 

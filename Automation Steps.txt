@@ -1,0 +1,55 @@
+(.venv) PS D:\LuckyBags\Automation\Production-Automation> python matcher.py
+
+=== Lucky Bags Artwork Matcher ===
+
+Production candidates : 40
+MATCHED               : 22
+REVIEW                : 10
+MISSING               : 2
+CUSTOM                : 6
+
+JSON   : D:\LuckyBags\Automation\Production-Automation\output\artwork_matches.json
+Report : D:\LuckyBags\Automation\Production-Automation\output\MATCH_REPORT.md
+
+(.venv) PS D:\LuckyBags\Automation\Production-Automation>
+
+
+python build_verification.py
+
+start .\output\verification.html
+
+
+pip install flask
+Get-Content .\output\verification_decisions.json
+
+dir .\output\print_batches
+
+
+Printer: Printer is Epson SureColor F9470H
+
+
+Implementation
+
+Shopify connection                         ✓
+Current unfulfilled orders                 ✓
+Line-item extraction                       ✓
+Bag vs non-bag identification              ✓
+Series detection                           ✓
+Single / Double rules                      ✓
+Material recipes                           ✓
+
+Google Drive connection                    ✓
+Group A / Group B artwork discovery        ✓
+Series-folder restriction                  ✓
+Stock artwork matching                     ✓
+Single artwork selection                   ✓
+Double FRONT + BACK selection              ✓
+
+Verification webpage                       ✓
+Shopify image vs Drive image               ✓
+2 orders per desktop row                   ✓
+Single / Double / Custom filters           ✓
+Correct / Wrong verification               ✓
+Verification persistence                   ✓
+Exact Drive-file approval protection       ✓
+Ready-for-Print eligibility                ✓

@@ -1,0 +1,79 @@
+name: Production Verification Action
+on:
+  issues:
+    types: [opened]
+permissions:
+  contents: write
+  issues: write
+concurrency:
+  group: production-state
+  cancel-in-progress: false
+jobs:
+  verify:
+    if: startsWith(github.event.issue.title, '[PRODUCTION VERIFY]')
+    runs-on: ubuntu-latest
+    env:
+      LB_SHOP: h0yf1i-yt.myshopify.com
+      SHOPIFY_API_VERSION: "2026-07"
+      GOOGLE_DRIVE_ROOT_FOLDER_ID: 1WINKlgMI9U6PXzwoyWx4cN8iB4l-Q5lt
+      LB_CLIENT_ID: ${{ secrets.LB_CLIENT_ID }}
+      LB_CLIENT_SECRET: ${{ secrets.LB_CLIENT_SECRET }}
+      GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+    steps:
+      - name: Authorize operator
+        env:
+          ALLOWED: ${{ vars.PRODUCTION_USERS }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          python - <<'PY'
+          import os
+          allowed={x.strip().lower() for x in os.environ.get("ALLOWED","").split(",") if x.strip()}
+          if os.environ["ACTOR"].lower() not in allowed:
+              raise SystemExit("Unauthorized production operator")
+          print("Authorized:",os.environ["ACTOR"])
+          PY
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: git pull --rebase origin main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Parse request
+        env:
+          BODY: ${{ github.event.issue.body }}
+        run: |
+          python - <<'PY'
+          import os,re
+          b=os.environ.get("BODY","")
+          lid=re.search(r"LINE_ITEM_ID:\s*(gid://shopify/LineItem/\d+)",b)
+          dec=re.search(r"DECISION:\s*(CORRECT|WRONG)",b,re.I)
+          if not lid or not dec: raise SystemExit("Invalid verification request")
+          with open(os.environ["GITHUB_ENV"],"a") as f:
+              f.write("LINE_ITEM_ID="+lid.group(1)+"\n")
+              f.write("DECISION="+dec.group(1).upper()+"\n")
+          PY
+      - name: Refresh evidence
+        run: |
+          python discover.py
+          python matcher.py
+      - name: Apply verification
+        run: python apply_verification.py
+      - name: Rebuild dashboard
+        run: python build_pages.py
+      - name: Commit state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add state/verification_decisions.json docs/
+          git commit -m "Production verification: $DECISION [skip ci]"
+          git push
+      - name: Close request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+        run: |
+          gh issue comment "$ISSUE" --body "Production verification completed: **$DECISION**."
+          gh issue close "$ISSUE"

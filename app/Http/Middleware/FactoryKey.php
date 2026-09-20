@@ -1,0 +1,1 @@
+<?php namespace App\Http\Middleware;use Closure;class FactoryKey{public function handle($r,Closure $next){abort_unless(hash_equals((string)env('FACTORY_API_KEY'),(string)$r->bearerToken()),401);return $next($r);}}

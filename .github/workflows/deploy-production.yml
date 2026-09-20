@@ -1,0 +1,65 @@
+name: Lucky Bags Production Deployment
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: lucky-bags-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy Lucky Bags Production
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout latest code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, openssl, pdo, sqlite3, pdo_sqlite, tokenizer, xml, ctype, fileinfo
+          coverage: none
+
+      - name: Validate Laravel application
+        run: |
+          composer install --no-interaction --prefer-dist --no-progress
+          php artisan about
+
+      - name: FTP deploy
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.LB_PRODUCTION_FTP_SERVER }}
+          username: ${{ secrets.LB_PRODUCTION_FTP_USERNAME }}
+          password: ${{ secrets.LB_PRODUCTION_FTP_PASSWORD }}
+          protocol: ftp
+          port: 21
+          local-dir: ./
+          server-dir: ${{ secrets.LB_PRODUCTION_FTP_DIRECTORY }}
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.github/**
+            **/.env
+            **/vendor/**
+            **/node_modules/**
+            **/database/*.sqlite
+            **/storage/logs/**
+            **/storage/framework/cache/**
+            **/storage/framework/sessions/**
+            **/storage/framework/views/**
+            **/automation/.venv/**
+            **/automation/.env
+            **/automation/logs/**
+            **/automation/factory_print/**
+            **/automation/dist/**
+            **/service-account.json
+            **/factory_print/**
+            **/.vscode/**
+            **/.idea/**
+            **/tests/**

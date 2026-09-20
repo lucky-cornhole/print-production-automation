@@ -1,0 +1,2 @@
+<?php
+namespace App\Models;use Illuminate\Database\Eloquent\Model;class ProductionItem extends Model{protected $fillable=['line_item_id','order_number','product','variant','sku','quantity','shopify_image','series_code','design_type','design','color','is_custom','match_status','confidence','matches'];protected function casts():array{return ['matches'=>'array','is_custom'=>'boolean','quantity'=>'integer'];}public function decision(){return $this->hasOne(VerificationDecision::class,'line_item_id','line_item_id');}}

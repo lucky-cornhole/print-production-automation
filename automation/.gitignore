@@ -1,0 +1,8 @@
+.venv/
+.env
+service-account.json
+factory_print/
+logs/
+dist/
+__pycache__/
+*.pyc

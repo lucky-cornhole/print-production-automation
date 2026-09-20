@@ -26,10 +26,24 @@ jobs:
           extensions: mbstring, openssl, pdo, sqlite3, pdo_sqlite, tokenizer, xml, ctype, fileinfo
           coverage: none
 
+      - name: Validate Composer configuration
+        run: composer validate --no-check-publish
+
+      - name: Install dependencies for validation
+        run: composer install --no-interaction --prefer-dist --no-progress
+
       - name: Validate Laravel application
+        run: php artisan about
+
+      - name: Build production dependencies
         run: |
-          composer install --no-interaction --prefer-dist --no-progress
-          php artisan about
+          rm -rf vendor
+          composer install \
+            --no-dev \
+            --prefer-dist \
+            --optimize-autoloader \
+            --no-interaction \
+            --no-progress
 
       - name: FTP deploy
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -39,14 +53,17 @@ jobs:
           password: ${{ secrets.LB_PRODUCTION_FTP_PASSWORD }}
           protocol: ftp
           port: 21
+
+          # FTP account is already rooted at:
+          # /home2/antspixa/public_html/x_dev/luckyprodauto/prod
           local-dir: ./
-          server-dir: ${{ secrets.LB_PRODUCTION_FTP_DIRECTORY }}
+          server-dir: ./
+
           exclude: |
             **/.git*
             **/.git*/**
             **/.github/**
             **/.env
-            **/vendor/**
             **/node_modules/**
             **/database/*.sqlite
             **/storage/logs/**
@@ -63,3 +80,4 @@ jobs:
             **/.vscode/**
             **/.idea/**
             **/tests/**
+            **/*.log

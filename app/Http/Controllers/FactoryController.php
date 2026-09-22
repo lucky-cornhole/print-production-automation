@@ -1,2 +1,48 @@
 <?php
-namespace App\Http\Controllers;use App\Models\PrintBatch;use Illuminate\Http\Request;class FactoryController extends Controller{function next(){$b=PrintBatch::where('status','QUEUED')->oldest()->first();return response()->json(['ok'=>true,'batch'=>$b]);}function status(Request $r,PrintBatch $batch){$s=$r->validate(['status'=>'required|in:CLAIMED,DOWNLOADING,PREPARED,SENT_TO_RIP,PRINTED,FAILED'])['status'];$batch->status=$s;if($s==='CLAIMED')$batch->claimed_at=now();if($s==='PRINTED')$batch->completed_at=now();$batch->save();return response()->json(['ok'=>true]);}}
+
+namespace App\Http\Controllers;
+
+use App\Models\PrintBatch;
+use Illuminate\Http\Request;
+
+class FactoryController extends Controller
+{
+    public function next()
+    {
+        $batch = PrintBatch::whereIn('status', [
+            'QUEUED',
+            'HANDOFF_REQUESTED',
+        ])
+            ->oldest()
+            ->first();
+
+        return response()->json([
+            'ok' => true,
+            'batch' => $batch,
+        ]);
+    }
+
+    public function status(Request $request, PrintBatch $batch)
+    {
+        $status = $request->validate([
+            'status' => 'required|in:CLAIMED,DOWNLOADING,PREPARED,HANDOFF_REQUESTED,SENT_TO_RIP,PRINTED,FAILED',
+        ])['status'];
+
+        $batch->status = $status;
+
+        if ($status === 'CLAIMED' && !$batch->claimed_at) {
+            $batch->claimed_at = now();
+        }
+
+        if ($status === 'PRINTED') {
+            $batch->completed_at = now();
+        }
+
+        $batch->save();
+
+        return response()->json([
+            'ok' => true,
+            'batch' => $batch->fresh(),
+        ]);
+    }
+}
